@@ -1,0 +1,6 @@
+*.idea
+*.directory
+*.log
+*.jar
+
+target/
