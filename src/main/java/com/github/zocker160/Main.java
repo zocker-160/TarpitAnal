@@ -137,7 +137,7 @@ public class Main {
 		System.out.println("Connected: "+numConnected);
 		System.out.println("Disconnected: "+numDisconnected);
 		System.out.println("Time in total: "+TimeHelper.getTimeString(totalTime));
-		System.out.println("Average: "+TimeHelper.getTimeString( new Duration( totalTime.getMillis() / totalNumEntries ) ));
+		System.out.println("Average: "+TimeHelper.getTimeString( new Duration( totalTime.getMillis() / sessions.size() ) ));
 		System.out.println("Longest: "+TimeHelper.getTimeString(longestSession));
 		System.out.println("Shortest: "+TimeHelper.getTimeString(shortestSession));
 
