@@ -42,7 +42,12 @@ public class Main {
 
 			System.exit(0);
         }
-		
+
+		if (arguments.getFile() == null) {
+			System.out.println(cli.getUsageMessage());
+			System.exit(0);
+		}
+
 		System.out.println("InputFile: " + arguments.getFile());
 		
 		// file parser
