@@ -3,6 +3,9 @@ package com.github.zocker160.model;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.joda.time.LocalDateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -46,7 +49,57 @@ public class LogEntry {
 		
 		return new LogEntry(localDateTime, con, state);
 	}
-	
+
+	public static LogEntry parseNew(byte[] data) throws UnknownHostException, ParseException {
+		if (data.length < 62 || data[43] != (byte) 'C')
+			throw new ParseException(new String(data), 0);
+
+		byte[] datetime = Arrays.copyOfRange(data, 0, 19);
+		byte[] remainingData = Arrays.copyOfRange(data, 52, data.length);
+
+		//System.out.println(new String(remainingData));
+
+		byte[] ip;
+		byte[] port;
+		byte[] tState;
+
+		int start = 0;
+		int pointer = 0;
+		State state;
+
+		while (remainingData[pointer] != '\'')
+			pointer++;
+
+		ip = Arrays.copyOfRange(remainingData, start, pointer);
+
+		//System.out.println(new String(ip));
+
+		pointer += 3;
+		start = pointer;
+
+		while (remainingData[pointer] != ')')
+			pointer++;
+
+		port = Arrays.copyOfRange(remainingData, start, pointer);
+		tState = Arrays.copyOfRange(remainingData, pointer+2, remainingData.length);
+
+		//System.out.println(new String(port));
+		//System.out.println(new String(state));
+
+		LocalDateTime localDateTime = formatter.parseLocalDateTime(new String(datetime));
+
+		Connection con = new Connection(
+				(Inet4Address) Inet4Address.getByName(new String(ip)),
+				Integer.parseInt(new String(port)));
+
+		if (tState.length == 9)
+			state = State.CONNECTED;
+		else
+			state = State.DISCONNECTED;
+
+		return new LogEntry(localDateTime, con, state);
+	}
+
 	private final LocalDateTime time;
 	private final Connection con;
 	private final State state;

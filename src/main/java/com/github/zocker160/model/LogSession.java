@@ -43,16 +43,12 @@ public class LogSession {
 
 		for (LogEntry entry : lList) {
 			if (entry.getState() == State.DISCONNECTED) {
-				if (connected.getTime().isBefore(entry.getTime())) {
+				if (connected.getTime().isAfter(entry.getTime())) {
 					continue;
 				}
-				Period period = Period.fieldDifference(connected.getTime(), entry.getTime());
-				// TODO: use proper duration method
+				//Period period = Period.fieldDifference(connected.getTime(), entry.getTime());
 
-				Duration duration = new Duration(
-						connected.getTime().toDateTime(DateTimeZone.UTC),
-						entry.getTime().toDateTime(DateTimeZone.UTC)
-				);
+				Duration duration = calcDuration(connected, entry);
 				
 				if (bestTime == null || duration.isShorterThan(bestTime)) {
 					best = entry;
@@ -61,26 +57,38 @@ public class LogSession {
 			}
 		}
 		if (best != null) {
+			// TODO: more optimization possible: .remove() iterates over the entire list (again)!
 			lList.remove(best);
 		}
 		return best;
 	}
 
+	public static Duration calcDuration(LogEntry start, LogEntry end) {
+		return new Duration(
+				start.getTime().toDateTime(DateTimeZone.UTC),
+				end.getTime().toDateTime(DateTimeZone.UTC));
+	}
+
 	private final LogEntry connected;
 	private final LogEntry disconnected;
+	private final Duration duration;
 
 	public LogSession(LogEntry connected, LogEntry disconnected) {
 		super();
 		// TODO: sanity check those input values
 		this.connected = connected;
 		this.disconnected = disconnected;
+		// TODO: more optimization possible: duration gets calculated twice
+		this.duration = calcDuration(connected, disconnected);
 	}
 
 	public LogEntry getConnected() {
 		return connected;
 	}
-
 	public LogEntry getDisconnected() {
 		return disconnected;
+	}
+	public Duration getDuration() {
+		return duration;
 	}
 }
