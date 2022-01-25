@@ -8,12 +8,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.ParseException;
 import java.util.*;
+import java.util.concurrent.*;
 
-import com.github.zocker160.model.Connection;
-import com.github.zocker160.model.LogEntry;
-import com.github.zocker160.model.LogSession;
+import com.github.zocker160.model.*;
 
-import com.github.zocker160.model.State;
 import org.joda.time.Duration;
 import picocli.CommandLine;
 import picocli.CommandLine.ParameterException;
@@ -51,10 +49,14 @@ public class Main {
 		System.out.println("InputFile: " + arguments.getFile());
 		
 		// file parser
-		Map<Connection, List<LogEntry>> logMap = new HashMap<>();
-		
+		final Map<Connection, List<LogEntry>> logMap = new HashMap<>();
+
+		final ExecutorService executorService = Executors.newFixedThreadPool(4);
+		final List<Future<LogEntry>> results = new ArrayList<>();
+
 		long starttime = System.currentTimeMillis();
-		
+
+
 		try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(arguments.getFile()))) {
 			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 			int b; 
@@ -62,30 +64,17 @@ public class Main {
 			while( (b = input.read()) != -1 ) {
 				if (b == '\n') {
 					byte[] line =  buffer.toByteArray();
+
+					// Multithreading stuff
+					results.add( executorService.submit(new ParseWorker(line)) );
+					totalNumEntries++;
+
 					buffer.reset();
-
-					try {
-						//LogEntry tlog = LogEntry.parse(line);
-						//LogEntry tlog = LogEntry.parse_raw(new String(line));
-						LogEntry tlog = LogEntry.parseNew(line);
-						totalNumEntries++;
-
-						//System.out.println(tlog);
-
-						List<LogEntry> entries = logMap.computeIfAbsent(tlog.getCon(), (key) -> new ArrayList<>());
-						entries.add(tlog);
-					} catch (IllegalArgumentException e) {
-						e.printStackTrace();
-					} catch (ParseException e) {
-						//System.out.println("ignoring entry: "+e.getMessage());
-					}
 					continue;
 				}
 				buffer.write(b);
 			}
 			
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -93,6 +82,19 @@ public class Main {
 		long parsingTime = System.currentTimeMillis() - starttime;
 
 		// analyse data
+
+		for (Future<LogEntry> result : results) {
+			try {
+				LogEntry tlog = result.get();
+				if (tlog == null) continue;
+
+				List<LogEntry> entries = logMap.computeIfAbsent(tlog.getCon(), (key) -> new ArrayList<>());
+				entries.add(tlog);
+
+			} catch (InterruptedException | ExecutionException e) {
+				System.exit(1);
+			}
+		}
 
 		List<LogSession> sessions = new ArrayList<>();
 		int numConnected = 0;
@@ -153,5 +155,7 @@ public class Main {
 		System.out.println("Calculation time: "+(calculationTime-parsingTime)+"ms");
 		System.out.println("Print time: "+(printTime-calculationTime)+"ms");
 		System.out.println("TOTAL time: "+(System.currentTimeMillis()-starttime)+"ms");
+
+		executorService.shutdown();
 	}
 }
