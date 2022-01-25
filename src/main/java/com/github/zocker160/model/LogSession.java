@@ -1,8 +1,6 @@
 package com.github.zocker160.model;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -15,9 +13,10 @@ public class LogSession {
 		LogEntry connected;
 
 		while ((connected = getAnyConnected(lList)) != null) {
-			LogEntry disconnected = getDisconnected(lList, connected);
+			Map.Entry<LogEntry, Duration> resPair = getDisconnected(lList, connected);
+			LogEntry disconnected = resPair.getKey();
 			if (disconnected != null) {
-				sessions.add(new LogSession(connected, disconnected));
+				sessions.add(new LogSession(connected, disconnected, resPair.getValue()));
 			}
 		}
 
@@ -37,7 +36,7 @@ public class LogSession {
 		return null;
 	}
 
-	private static LogEntry getDisconnected(List<LogEntry> lList, LogEntry connected) {
+	private static Map.Entry<LogEntry, Duration> getDisconnected(List<LogEntry> lList, LogEntry connected) {
 		LogEntry best = null;
 		Duration bestTime = null;
 
@@ -57,10 +56,10 @@ public class LogSession {
 			}
 		}
 		if (best != null) {
-			// TODO: more optimization possible: .remove() iterates over the entire list (again)!
 			lList.remove(best);
 		}
-		return best;
+
+		return new AbstractMap.SimpleEntry<>(best, bestTime);
 	}
 
 	public static Duration calcDuration(LogEntry start, LogEntry end) {
@@ -74,12 +73,13 @@ public class LogSession {
 	private final Duration duration;
 
 	public LogSession(LogEntry connected, LogEntry disconnected) {
-		super();
-		// TODO: sanity check those input values
+		this(connected, disconnected, calcDuration(connected, disconnected));
+	}
+
+	public LogSession(LogEntry connected, LogEntry disconnected, Duration duration) {
 		this.connected = connected;
 		this.disconnected = disconnected;
-		// TODO: more optimization possible: duration gets calculated twice
-		this.duration = calcDuration(connected, disconnected);
+		this.duration = duration;
 	}
 
 	public LogEntry getConnected() {
